@@ -16,7 +16,7 @@ vlc.on('error', (error) => {
     process.exit()
 })
 
-const bot = mineflayer.createBot(testConfig)
+const bot = mineflayer.createBot(botConfig)
 
 inventoryViewer(bot, inventoryOptions)
 bot.loadPlugin(pathfinder)
