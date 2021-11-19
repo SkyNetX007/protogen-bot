@@ -8,7 +8,7 @@
   },
   "name": "protogen-bot",
   "version": "1.0.0",
-  "description": "Minecraft ProtogenBot based on mineflayer, with support for server netease music. You need to install VLC media player first to use it.",
+  "description": "Minecraft ProtogenBot based on mineflayer, with support for AllMusic plugin on server. You need to install VLC media player first to use it.",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
