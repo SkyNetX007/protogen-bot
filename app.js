@@ -3,7 +3,7 @@ const mineflayerViewer = require('prismarine-viewer').mineflayer;
 const { pathfinder, Movements } = require('mineflayer-pathfinder');
 const { GoalBlock } = require('mineflayer-pathfinder').goals;
 const inventoryViewer = require('mineflayer-web-inventory');
-const http = require('http');
+var http = require('http');
 
 const config = require('./config');
 const { readLine, close } = require('./readconsole');
@@ -45,18 +45,35 @@ bot.on('messagestr', (message, messagePosition, jsonMsg) => {
         musicInfoArr.splice(3, 1)
         console.log(`歌名：${musicInfoArr[0]}\t艺术家：${musicInfoArr[1]}\t专辑：${musicInfoArr[2]}`) // MusicName, Artist, Album, PlayerName
         let query = neteaseApi.url + `/cloudsearch?limit=1&keywords=${musicInfoArr[0]} ${musicInfoArr[1]} ${musicInfoArr[2]}`
+        var mId = ''
+        var InfoJson = ''
+        var mName = ''
+        var mArtist = ''
+        var mAlbum = ''
         http.get(query, (res) => {
             // console.log(`Got response: ${res.statusCode}`)
             res.on('data', (chunk) => {
-                var InfoJson = JSON.parse(chunk)
-                var mName = InfoJson.result.songs[0].name
-                var mArtist = InfoJson.result.songs[0].ar[0].name
-                var mAlbum = InfoJson.result.songs[0].al.name
-                var mId = InfoJson.result.songs[0].id
+                InfoJson = JSON.parse(chunk)
+                mName = InfoJson.result.songs[0].name
+                mArtist = InfoJson.result.songs[0].ar[0].name
+                mAlbum = InfoJson.result.songs[0].al.name
+                mId = InfoJson.result.songs[0].id
                 console.log(`[API]歌名：${mName}\t艺术家：${mArtist}\t专辑：${mAlbum}\tMID: ${mId}`)
-                vlc.playlistEmpty()
-                vlc.addToQueueAndPlay(`https://music.163.com/song/media/outer/url?id=${mId}.mp3`)
-            });
+
+                // get direct url
+                let queryUrl = neteaseApi.url + `/song/url?br=320000&id=${mId}`
+                http.get(queryUrl, (res) => {
+                    // console.log(`Got response: ${res.statusCode}`)
+                    res.on('data', (chunk) => {
+                        var UrlJson = JSON.parse(chunk)
+                        let directUrl = UrlJson.data[0].url
+                        console.log(`[API]直链: ${directUrl}`)
+                        vlc.playlistEmpty()
+                        vlc.addToQueueAndPlay(directUrl)
+                    })
+                }
+                )
+            })
         }
         )
     }
