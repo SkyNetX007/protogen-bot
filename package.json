@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "mineflayer": "^3.11.2",
+    "mineflayer-pathfinder": "^1.8.0",
+    "mineflayer-web-inventory": "^1.6.3",
+    "node-vlc-http": "^1.2.0",
+    "prismarine-viewer": "^1.20.0"
+  },
+  "name": "protogen-bot",
+  "version": "1.0.0",
+  "description": "Minecraft ProtogenBot based on mineflayer, with support for server netease music. You need to install VLC media player first to use it.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^16.11.7"
+  }
+}
