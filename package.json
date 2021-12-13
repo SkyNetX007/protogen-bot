@@ -1,10 +1,7 @@
 {
   "dependencies": {
     "mineflayer": "^3.11.2",
-    "mineflayer-pathfinder": "^1.8.0",
-    "mineflayer-web-inventory": "^1.6.3",
-    "node-vlc-http": "^1.2.0",
-    "prismarine-viewer": "^1.20.0"
+    "mineflayer-pathfinder": "^1.8.0"
   },
   "name": "protogen-bot",
   "version": "1.0.0",
@@ -16,6 +13,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^16.11.7"
+    "@types/node": "^16.11.12"
   }
 }
