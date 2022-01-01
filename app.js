@@ -1,35 +1,45 @@
-const mineflayer = require('mineflayer');
-const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
+const mineflayer = require("mineflayer");
+const { pathfinder, Movements, goals } = require("mineflayer-pathfinder");
+var http = require("http");
+var fs = require("fs");
+var url = require("url");
 
-const config = require('./config');
-const { readLine, close } = require('./readconsole');
+const config = require("./config");
+const { readLine, close } = require("./readconsole");
 
-const bot = mineflayer.createBot(botConfig);
+var bot = mineflayer.createBot(botConfig);
 bot.loadPlugin(pathfinder);
+bindEvents(bot);
 
-bot.on('chat', async (username, message) => {
-    
-    if (username === bot.username) return
+function bindEvents(bot) {
 
-    console.log(`<${username}> ${message}`);
+    bot.on("chat", async (username, message) => {
+        if (username === bot.username) return;
 
-    if (/^zzz/.test(message)) {
-        goToSleep();
-    }
+        console.log(`<${username}> ${message}`);
 
-    if (/furry|福瑞/.test(message)) {
-        bot.chat('福瑞...嘿嘿...福瑞！');
-    }
-    
-    if (/^:cmd#[\w/@*\x20/\u4E00-\u9FA5]+$/.test(message)) {
-        cmd = message.split('#');
-        console.log('/' + cmd[1]);
-        bot.chat('/' + cmd[1]);
-    }
+        if (/^zzz/.test(message)) {
+            goToSleep();
+        }
 
-    if (/^:bot#help$/.test(message)) {
-        var helpMsg = 
-`:bot#[CMD] - 执行命令[CMD]
+        if (/furry|福瑞/.test(message)) {
+            bot.chat("福瑞...嘿嘿...福瑞！");
+        }
+
+        if (/^:cmd#[\w/@*!#=\[\]\x20/\u4E00-\u9FA5]+$/.test(message)) {
+            cmd = message.slice(5);
+            console.log("Command: " + cmd);
+            bot.chat("/" + cmd);
+        }
+
+        if (/^:msg#[\w/@*!#=\[\]\x20/\u4E00-\u9FA5]+$/.test(message)) {
+            msg = message.slice(5);
+            console.log("Message: " + msg);
+            bot.chat(msg);
+        }
+
+        if (/^:bot#help$/.test(message)) {
+            var helpMsg = `:bot#[CMD] - 执行命令[CMD]
 :bot#help - 显示帮助
 :bot#exit - 退出
 :bot#stats - 状态
@@ -38,77 +48,107 @@ bot.on('chat', async (username, message) => {
 :bot#inv - 显示 bot 的背包
 :bot#toss [ITEM] - 丢弃物品[ITEM]
 :bot#toss [AMOUNT] [ITEM] - 丢弃物品[ITEM] [AMOUNT] 个
+:cmd#[CMD] - 执行命令[CMD]
+:msg#[MSG] - 发送消息[MSG]
 zzz - 找床摸鱼`;
-        bot.whisper(username, helpMsg);
-    }
-    
-    if (/^:bot#stats$/.test(message)) {
-        bot.whisper(username, botStats());
-    }
+            bot.whisper(username, helpMsg);
+        }
 
-    if (/^:bot#exit$/.test(message)) {
-        close();
-        bot.quit();
-        process.exit();
-    }
-    
-    if (/^:bot#tp2Me$/.test(message)) {
-        bot.chat('/tpa ' + username);
-    }
+        if (/^:bot#stats$/.test(message)) {
+            bot.whisper(username, botStats());
+        }
 
-    if (/^:bot#tp2Bot$/.test(message)) {
-        bot.chat('/tpahere ' + username);
-    }
-        
-    const InventoryCommand = message.split(' ');
-    if (/^:bot#inv$/.test(message)) {
-        sayItems();
-    }
+        if (/^:bot#exit$/.test(message)) {
+            close();
+            bot.quit();
+            process.exit();
+        }
 
-    if (/^:bot#toss \d+ \w+$/.test(message)) {
-        // toss amount name
-        // ex: toss 64 diamond
-        tossItem(InventoryCommand[2], InventoryCommand[1]);
+        if (/^:bot#tp2Me$/.test(message)) {
+            bot.chat("/tpa " + username);
+        }
+
+        if (/^:bot#tp2Bot$/.test(message)) {
+            bot.chat("/tpahere " + username);
+        }
+
+        const InventoryCommand = message.split(" ");
+        if (/^:bot#inv$/.test(message)) {
+            sayItems();
+        }
+
+        if (/^:bot#toss \d+ \w+$/.test(message)) {
+            // toss amount name
+            // ex: toss 64 diamond
+            tossItem(InventoryCommand[2], InventoryCommand[1]);
+        }
+
+        if (/^:bot#toss \w+$/.test(message)) {
+            // toss name
+            // ex: toss diamond
+            tossItem(InventoryCommand[1]);
+        }
+    });
+
+    bot.on("messagestr", async (message, messagePosition, jsonMsg) => {
+        if (messagePosition === "chat") return;
+        console.log(message);
+    });
+
+    //bot.once('spawn', () => { bot.chat("开始摸鱼"); });
+    bot.on("death", () => {
+        bot.chat("呜呜呜，不许欺负福瑞！");
+    });
+    CommandInput();
+
+    //  记录错误和被踢出服务器的原因:
+    bot.on("kicked", console.log);
+    bot.on("error", console.log);
+    bot.on("end", () => {
+        console.log("Bot disconnected");
+        ReConnect();
+    });
+
+}
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function ReConnect() {
+    await delay(10000);
+    try {
+        console.log("重新连接...");
+        bot = mineflayer.createBot(botConfig);
+        //bindEvents(bot);
+    } catch (error) {
+        console.log("Error: " + error);
+        ReConnect();
     }
-
-    if (/^:bot#toss \w+$/.test(message)) {
-        // toss name
-        // ex: toss diamond
-        tossItem(InventoryCommand[1]);
-    }
-
-})
-
-bot.on('messagestr', async (message, messagePosition, jsonMsg) => {
-    if (messagePosition === 'chat') return
-    console.log(message);
-})
+}
 
 async function CommandInput() {
     console.log("准备读取命令...");
     let input = await readLine();
     while (true) {
-        if (input === '') { continue }
-        if (input === ':help') {
-            console.log(
-`:help - 显示帮助
-:exit :(q)uit - 退出
-:stats - 状态`)
+        if (input === "") {
+            continue;
         }
-        else if (input === ':exit' || input === ':quit' || input === ':q') {
+        if (input === ":help") {
+            console.log(
+                `:help - 显示帮助
+:exit :(q)uit - 退出
+:stats - 状态`
+            );
+        } else if (input === ":exit" || input === ":quit" || input === ":q") {
             close();
             bot.quit();
             process.exit();
-        }
-        else if (input === ':stats') {
+        } else if (input === ":stats") {
             console.log(botStats());
-        }
-        else if (input[0] === '/') {
+        } else if (input[0] === "/") {
             let cmd = input.substr(1);
-            console.log('Command: ' + cmd);
+            console.log("Command: " + cmd);
             bot.chat(input);
-        }
-        else {
+        } else {
             console.log(`<${bot.username}> ` + input);
             bot.chat(input);
         }
@@ -116,44 +156,48 @@ async function CommandInput() {
     }
 }
 
-async function goToSleep () {
+async function goToSleep() {
     const bed = bot.findBlock({
-    matching: (block) => bot.isABed(block),
+        matching: (block) => bot.isABed(block),
     });
     if (bed) {
         try {
-            const mcData = require('minecraft-data')(bot.version);
+            const mcData = require("minecraft-data")(bot.version);
             const defaultMove = new Movements(bot, mcData);
 
             const p = bed.position;
             bot.pathfinder.setMovements(defaultMove);
-            bot.pathfinder.setGoal(new goals.GoalNear(p.x,p.y,p.z,1));
+            bot.pathfinder.setGoal(new goals.GoalNear(p.x, p.y, p.z, 1));
 
-            await bot.sleep(bed, ()=>{
+            await bot.sleep(bed, () => {
                 bot.chat("Oyasumi...");
             });
         } catch (err) {
             bot.chat(`${err.message}.`);
         }
     } else {
-        bot.chat('莫得床！');
+        bot.chat("莫得床！");
     }
 }
 
-function sayItems (items = null) {
+function sayItems(items = null) {
     if (!items) {
         items = bot.inventory.items();
-        if (require('minecraft-data')(bot.version).isNewerOrEqualTo('1.9') && bot.inventory.slots[45]) items.push(bot.inventory.slots[45]);
+        if (
+            require("minecraft-data")(bot.version).isNewerOrEqualTo("1.9") &&
+            bot.inventory.slots[45]
+        )
+            items.push(bot.inventory.slots[45]);
     }
-    const output = items.map(itemToString).join(', ');
+    const output = items.map(itemToString).join(", ");
     if (output) {
         bot.chat(output);
     } else {
-        bot.chat('一穷二白');
+        bot.chat("一穷二白");
     }
 }
 
-function tossItem (name, amount) {
+function tossItem(name, amount) {
     amount = parseInt(amount, 10);
     const item = itemByName(name);
     if (!item) {
@@ -164,46 +208,43 @@ function tossItem (name, amount) {
         bot.tossStack(item, checkIfTossed);
     }
 
-    function checkIfTossed (err) {
-    if (err) {
-      bot.chat(`无法丢弃： ${err.message}`);
-    } else if (amount) {
-      bot.chat(`丢弃了 ${amount} 个 ${name}`);
-    } else {
-      bot.chat(`丢弃了 ${name}`);
-    }
+    function checkIfTossed(err) {
+        if (err) {
+            bot.chat(`无法丢弃： ${err.message}`);
+        } else if (amount) {
+            bot.chat(`丢弃了 ${amount} 个 ${name}`);
+        } else {
+            bot.chat(`丢弃了 ${name}`);
+        }
     }
 }
 
-function itemToString (item) {
+function itemToString(item) {
     if (item) {
-        return `${item.name} x ${item.count}`
+        return `${item.name} x ${item.count}`;
     } else {
-        return '(nothing)'
+        return "(nothing)";
     }
 }
 
-function itemByName (name) {
-    const items = bot.inventory.items()
-    if (require('minecraft-data')(bot.version).isNewerOrEqualTo('1.9') && bot.inventory.slots[45]) items.push(bot.inventory.slots[45]);
-    return items.filter(item => item.name === name)[0]
+function itemByName(name) {
+    const items = bot.inventory.items();
+    if (
+        require("minecraft-data")(bot.version).isNewerOrEqualTo("1.9") &&
+        bot.inventory.slots[45]
+    )
+        items.push(bot.inventory.slots[45]);
+    return items.filter((item) => item.name === name)[0];
 }
 
 function botStats() {
     var stats = `生命值：${bot.health}    饥饿度：${bot.food}    等级：${bot.experience.level}    坐标：${bot.entity.position}    维度：${bot.game.dimension}\n`;
     var playerList = Object.keys(bot.players);
-    for (var i = playerList.length - 1; i>=0; i--) {
-        if (playerList[i][0] === '~') {
+    for (var i = playerList.length - 1; i >= 0; i--) {
+        if (playerList[i][0] === "~") {
             playerList.splice(i, 1);
         }
     }
     stats += `玩家人数：${playerList.length}    玩家列表：${playerList}`;
-    return stats
+    return stats;
 }
-
-bot.once('spawn', () => { bot.chat("开始摸鱼"); });
-CommandInput();
-
-//  记录错误和被踢出服务器的原因:
-bot.on('kicked', console.log)
-bot.on('error', console.log)

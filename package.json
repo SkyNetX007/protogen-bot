@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "mineflayer": "^3.11.2",
+    "mineflayer": "^3.14.0",
     "mineflayer-pathfinder": "^1.8.0"
   },
   "name": "protogen-bot",
