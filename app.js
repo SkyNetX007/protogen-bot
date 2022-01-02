@@ -5,15 +5,29 @@ var http = require("http");
 var fs = require("fs");
 var url = require("url");
 var bodyParser = require("body-parser");
+var log4js = require('log4js');
 
 // Self awake
-require("heroku");
+require("./heroku");
 
 const config = require("./config");
 const { readLine, close } = require("./readconsole");
 const { json } = require("express/lib/response");
 const app = express();
 const port = process.env.PORT || 3000;
+
+log4js.configure({
+    appenders: {
+        console: { type: 'console' },
+        file: { type: 'file', filename: 'logs/bot.log', maxLogSize: 10240, backups: 1, category: 'default' },
+    },
+    categories: {
+        default: { appenders: ['console', 'file'], level: 'info' },
+    }
+})
+
+var logger = log4js.getLogger('FurryBot');
+logger.level = 'INFO';
 
 var bot = mineflayer.createBot(botConfig);
 bot.loadPlugin(pathfinder);
@@ -24,9 +38,9 @@ function bindEvents(bot) {
     var onlineState = false;
 
     bot.on("chat", async (username, message) => {
-        if (username === bot.username) return;
+        logger.info(`<${username}> ${message}`);
 
-        console.log(`<${username}> ${message}`);
+        if (username === bot.username) return;
 
         if (/^zzz/.test(message)) {
             goToSleep();
@@ -38,13 +52,13 @@ function bindEvents(bot) {
 
         if (/^:cmd#[\w/@*!#=\[\]\x20/\u4E00-\u9FA5]+$/.test(message)) {
             cmd = message.slice(5);
-            console.log("Command: " + cmd);
+            logger.info("Command: " + cmd);
             bot.chat("/" + cmd);
         }
 
         if (/^:msg#[\w/@*!#=\[\]\x20/\u4E00-\u9FA5]+$/.test(message)) {
             msg = message.slice(5);
-            console.log("Message: " + msg);
+            logger.info("Message: " + msg);
             bot.chat(msg);
         }
 
@@ -102,7 +116,7 @@ zzz - 找床摸鱼`;
 
     bot.on("messagestr", async (message, messagePosition, jsonMsg) => {
         if (messagePosition === "chat") return;
-        console.log(message);
+        logger.info(message);
     });
 
     //bot.once('spawn', () => { bot.chat("开始摸鱼"); });
@@ -113,10 +127,10 @@ zzz - 找床摸鱼`;
     CommandInput();
 
     //  记录错误和被踢出服务器的原因:
-    bot.on("kicked", console.log);
-    bot.on("error", console.log);
+    bot.on("kicked", logger.info);
+    bot.on("error", logger.info);
     bot.on("end", () => {
-        console.log("Bot disconnected");
+        logger.info("Bot disconnected");
         onlineState = false;
         ReConnect();
     });
@@ -125,9 +139,9 @@ zzz - 找床摸鱼`;
     app.use(express.static('public'));
     app.use(bodyParser.urlencoded({ extended: false }));
     app.get('/api/state', function (req, res) {
-        var botState = { "isOnline": false, "health": 0, "food": 0, "level": 0, "dimension": "Furry Island", "position": { "x": 0, "y": 0, "z": 0, }, "inventory": {}, };
+        var botState = { "isOnline": false, "username": "Steve", "health": 0, "food": 0, "level": 0, "dimension": "Furry Island", "position": { "x": 0, "y": 0, "z": 0, }, "inventory": {}, };
         if (onlineState) {
-            botState = { "isOnline": onlineState, "health": bot.health, "food": bot.food, "level": bot.experience.level, "dimension": bot.game.dimension, "position": { "x": bot.entity.position.x, "y": bot.entity.position.y, "z": bot.entity.position.z, }, "inventory": bot.inventory, };
+            botState = { "isOnline": onlineState, "username": bot.username, "health": bot.health, "food": bot.food, "level": bot.experience.level, "dimension": bot.game.dimension, "position": { "x": bot.entity.position.x, "y": bot.entity.position.y, "z": bot.entity.position.z, }, "inventory": bot.inventory, };
         }
         var json = JSON.stringify(botState);
         res.send(json);
@@ -140,8 +154,36 @@ zzz - 找床摸鱼`;
         var msg = req.body.msg;
         bot.chat(msg);
     });
+    app.post('/api/botcmd', function (req, res) {
+        var msg = req.body.msg;
+        if (msg === "") { return; }
+        if (msg === ":help") {
+            logger.info(
+                `调试指令：
+:help - 显示帮助
+:exit :(q)uit - 退出
+:stats - 状态`
+            );
+        } else if (msg === ":exit" || msg === ":quit" || msg === ":q") {
+            close();
+            bot.quit();
+            process.exit();
+        } else if (msg === ":stats") {
+            logger.info(botStats());
+        }
+    });
+    app.get('/api/log', function (req, res) {
+        fs.readFile('./logs/bot.log', 'utf8', function (err, data) {
+            if (!err) {
+                res.send(data);
+            }
+            else {
+                res.send(err);
+            }
+        })
+    });
 
-    app.listen(port, () => console.log(`Server running on ${port}`));
+    app.listen(port, () => logger.info(`Server running on ${port}`));
 
     /*
     var server = http.createServer(function (request, response) {
@@ -149,7 +191,7 @@ zzz - 找床摸鱼`;
         // console.log(request.method + ': ' + request.url);
         // 将HTTP响应200写入response, 同时设置Content-Type: text/html:
         response.writeHead(200, { 'Content-Type': 'text/html' });
-
+ 
         var pathname = url.parse(request.url).pathname;
         if (pathname == '/') {
             fs.readFile("index.html", function (err, data) {
@@ -186,25 +228,25 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function ReConnect() {
     await delay(10000);
     try {
-        console.log("重新连接...");
+        logger.info("重新连接...");
         bot = mineflayer.createBot(botConfig);
         //bindEvents(bot);
     } catch (error) {
-        console.log("Error: " + error);
+        logger.info("Error: " + error);
         ReConnect();
     }
 }
 
 async function CommandInput() {
-    console.log("准备读取命令...");
+    console.info("准备读取命令...");
     let input = await readLine();
     while (true) {
         if (input === "") {
             continue;
         }
         if (input === ":help") {
-            console.log(
-                `:help - 显示帮助
+            console.log(`调试指令：
+:help - 显示帮助
 :exit :(q)uit - 退出
 :stats - 状态`
             );

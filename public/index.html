@@ -60,33 +60,45 @@
         <div class="col-12 d-flex justify-content-center">
           <div class="">
             <!-- bot state -->
-            <h4 class="mb-3">状态：</h4>
+            <div style="text-align:center">
+            <p class="">用户名: <span id="usernameState"></span></p>
             <p class="">连接状态: <span id="connectionState"></span></p>
             <p class="">生命: <span id="healthState"></span></p>
             <p class="">饥饿值: <span id="hungerState"></span></p>
             <p class="">等级: <span id="levelState"></span></p>
             <p class="">维度: <span id="dimensionState"></span></p>
             <p class="">位置: <span id="positionState"></span></p>
+            </div>
             
+            <!-- log -->
+            <code>
+              <textarea id="log" rows="10" cols="100" readonly="readonly"></textarea>
+            </code>
+
             <!-- minecraft console -->
-            <h4 class="mb-3">游戏内控制台：</h4>
-            <p><input type="text" id="msg" name="msg" style="width:350px"></p>
+            <h4 class="mb-3">游戏内控制台</h4>
+            <p><input type="text" id="msg" name="msg" style="width:400px"></p>
             <button onclick="sendCommand()">Command</button>
             <button onclick="sendChat()">Chat</button>
+            <button onclick="sendBotCMD()">BotCMD</button>
 
             <!-- user manual -->
-            <h4 class="mb-3 mt-5">使用手册：</h4>
+            <div style="text-align:center">
+            <h4 class="mb-3 mt-5">使用手册</h4>
             <p><code>:bot#help</code> 获取帮助</p>
             <p><code>:bot#tp2Me</code> 传送过来</p>
             <p><code>:bot#tp2Bot</code> 传送过去</p>
             <p><code>:msg#[MSG]</code> 发送消息</p>
             <p><code>:cmd#[CMD]</code> 执行命令</p>
-            <p>其他：</p>
+            </div>
+            <h3 class="mb-3 mt-5">注意：</h3>
             <ul>
               <li>如果要让 bot 睡觉，发 zzz(zzz...) 就行</li>
               <li>有任何问题请联系群里<code>@SkyNetX007</code></li>
               <li>Bot Lives Matter</li>
+              <li>Furry will rule the world!</li>
             </ul>
+            
           </div>
         </div>
         <div class="col-12 d-flex justify-content-center">
@@ -125,6 +137,33 @@
         });
         $("#msg").val("");
       }
+
+      function sendBotCMD() {
+          var msg = $("#msg").val();
+          $.ajax({
+            url: "/api/botcmd",
+            type: "POST",
+            data: {
+              msg: msg
+            },
+            success: function (data) {
+              console.log(data);
+            }
+          });
+          $("#msg").val("");
+        }
+
+      setInterval(function() {
+        $.ajax({
+          url: "/api/log",
+          type: "GET",
+          success: function(data) {
+            $("#log").empty();
+            $("#log").val(data);
+            $("#log").scrollTop($("#log")[0].scrollHeight);
+          }
+        });
+      }, 1000);
     </script>
 
     <script>
@@ -135,6 +174,8 @@
         if (botState) {
           document.getElementById("connectionState").innerText =
             botState?.isOnline ? "在线" : "不在线";
+          document.getElementById("usernameState").innerText =
+            botState?.username ?? "unknown";
           document.getElementById("healthState").innerText =
             botState?.health ?? "unknown";
           document.getElementById("hungerState").innerText =
@@ -162,9 +203,10 @@
           },
           document.getElementById("skinContainer")
         );
+        let botUsername = document.getElementById("usernameState").innerText;
         skinRender.render({
           url: "/images/Bot_skin.png",
-          username: "Exception_0x0194",
+          username: botUsername,
         });
         // skin animation
         let startTime = Date.now();
