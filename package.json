@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "express": "^4.17.2",
     "mineflayer": "^3.14.0",
     "mineflayer-pathfinder": "^1.8.0"
   },
@@ -8,6 +9,7 @@
   "description": "Minecraft ProtogenBot based on mineflayer, with support for AllMusic plugin on server. You need to install VLC media player first to use it.",
   "main": "app.js",
   "scripts": {
+    "start": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",

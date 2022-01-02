@@ -1,17 +1,26 @@
 const mineflayer = require("mineflayer");
 const { pathfinder, Movements, goals } = require("mineflayer-pathfinder");
+const express = require('express');
 var http = require("http");
 var fs = require("fs");
 var url = require("url");
 
+// Self awake
+require("heroku");
+
 const config = require("./config");
 const { readLine, close } = require("./readconsole");
+const { json } = require("express/lib/response");
+const app = express();
+const port = process.env.PORT || 3000;
 
 var bot = mineflayer.createBot(botConfig);
 bot.loadPlugin(pathfinder);
 bindEvents(bot);
 
 function bindEvents(bot) {
+
+    var onlineState = false;
 
     bot.on("chat", async (username, message) => {
         if (username === bot.username) return;
@@ -96,6 +105,7 @@ zzz - 找床摸鱼`;
     });
 
     //bot.once('spawn', () => { bot.chat("开始摸鱼"); });
+    bot.on("login", () => { onlineState = true; });
     bot.on("death", () => {
         bot.chat("呜呜呜，不许欺负福瑞！");
     });
@@ -106,9 +116,59 @@ zzz - 找床摸鱼`;
     bot.on("error", console.log);
     bot.on("end", () => {
         console.log("Bot disconnected");
+        onlineState = false;
         ReConnect();
     });
 
+    // Web panel
+    app.use(express.static('public'));
+    app.get('/api/state', function (req, res) {
+        var botState = { "isOnline": false, "health": 0, "food": 0, "level": 0, "dimension": "Furry Island", "position": { "x": 0, "y": 0, "z": 0, }, "inventory": [], };
+        if (onlineState) {
+            botState = { "isOnline": onlineState, "health": bot.health, "food": bot.food, "level": bot.experience.level, "dimension": bot.game.dimension, "position": { "x": bot.entity.position.x, "y": bot.entity.position.y, "z": bot.entity.position.z, }, "inventory": bot.inventory.items, };
+        }
+        var json = JSON.stringify(botState);
+        res.send(json);
+    });
+
+    app.listen(port, () => console.log(`Server running on ${port}`));
+
+    /*
+    var server = http.createServer(function (request, response) {
+        // 获得HTTP请求的method和url:
+        // console.log(request.method + ': ' + request.url);
+        // 将HTTP响应200写入response, 同时设置Content-Type: text/html:
+        response.writeHead(200, { 'Content-Type': 'text/html' });
+
+        var pathname = url.parse(request.url).pathname;
+        if (pathname == '/') {
+            fs.readFile("index.html", function (err, data) {
+                if (!err) {
+                    response.writeHead(200, { "Content-Type": "text/html;charset=UTF-8" });
+                    response.end(data);
+                } else {
+                    throw err;
+                }
+            });
+        } else if (pathname == '/api/state') {
+            response.writeHead(200, { "Content-Type": "application/json;charset=UTF-8" });
+            var botState = { "isOnline": false, "health": 0, "food": 0, "level": 0, "dimension": "Furry Island", "position": { "x": 0, "y": 0, "z": 0, }, "inventory": [], };
+            if (onlineState) {
+                botState = { "isOnline": onlineState, "health": bot.health, "food": bot.food, "level": bot.experience.level, "dimension": bot.game.dimension, "position": { "x": bot.entity.position.x, "y": bot.entity.position.y, "z": bot.entity.position.z, }, "inventory": bot.inventory.items, };
+            }
+            var json = JSON.stringify(botState);
+            response.end(json);
+        } else {
+            fs.readFile("./" + pathname, function (err, data) {
+                if (!err) {
+                    response.end(data);
+                } else {
+                    throw err;
+                }
+            });
+        }
+    }).listen(port);
+    */
 }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
