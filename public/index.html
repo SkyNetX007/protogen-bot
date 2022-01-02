@@ -67,6 +67,12 @@
             <p class="">等级: <span id="levelState"></span></p>
             <p class="">维度: <span id="dimensionState"></span></p>
             <p class="">位置: <span id="positionState"></span></p>
+            
+            <!-- minecraft console -->
+            <h4 class="mb-3">游戏内控制台：</h4>
+            <p><input type="text" id="msg" name="msg" style="width:350px"></p>
+            <button onclick="sendCommand()">Command</button>
+            <button onclick="sendChat()">Chat</button>
 
             <!-- user manual -->
             <h4 class="mb-3 mt-5">使用手册：</h4>
@@ -88,6 +94,38 @@
         </div>
       </div>
     </div>
+
+    <script>
+      function sendCommand() {
+        var msg = $("#msg").val();
+        $.ajax({
+          url: "/api/cmd",
+          type: "POST",
+          data: {
+            msg: msg
+          },
+          success: function(data) {
+            console.log(data);
+          }
+        });
+        $("#msg").val("");
+      }
+
+      function sendChat() {
+          var msg = $("#msg").val();
+          $.ajax({
+          url: "/api/chat",
+          type: "POST",
+          data: {
+            msg: msg
+          },
+          success: function (data) {
+            console.log(data);
+          }
+        });
+        $("#msg").val("");
+      }
+    </script>
 
     <script>
       const init = async () => {

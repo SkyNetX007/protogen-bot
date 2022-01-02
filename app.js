@@ -4,6 +4,7 @@ const express = require('express');
 var http = require("http");
 var fs = require("fs");
 var url = require("url");
+var bodyParser = require("body-parser");
 
 // Self awake
 require("heroku");
@@ -122,13 +123,22 @@ zzz - 找床摸鱼`;
 
     // Web panel
     app.use(express.static('public'));
+    app.use(bodyParser.urlencoded({ extended: false }));
     app.get('/api/state', function (req, res) {
-        var botState = { "isOnline": false, "health": 0, "food": 0, "level": 0, "dimension": "Furry Island", "position": { "x": 0, "y": 0, "z": 0, }, "inventory": [], };
+        var botState = { "isOnline": false, "health": 0, "food": 0, "level": 0, "dimension": "Furry Island", "position": { "x": 0, "y": 0, "z": 0, }, "inventory": {}, };
         if (onlineState) {
-            botState = { "isOnline": onlineState, "health": bot.health, "food": bot.food, "level": bot.experience.level, "dimension": bot.game.dimension, "position": { "x": bot.entity.position.x, "y": bot.entity.position.y, "z": bot.entity.position.z, }, "inventory": bot.inventory.items, };
+            botState = { "isOnline": onlineState, "health": bot.health, "food": bot.food, "level": bot.experience.level, "dimension": bot.game.dimension, "position": { "x": bot.entity.position.x, "y": bot.entity.position.y, "z": bot.entity.position.z, }, "inventory": bot.inventory, };
         }
         var json = JSON.stringify(botState);
         res.send(json);
+    });
+    app.post('/api/cmd', function (req, res) {
+        var msg = req.body.msg;
+        bot.chat("/" + msg);
+    });
+    app.post('/api/chat', function (req, res) {
+        var msg = req.body.msg;
+        bot.chat(msg);
     });
 
     app.listen(port, () => console.log(`Server running on ${port}`));
