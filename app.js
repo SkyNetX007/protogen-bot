@@ -27,43 +27,42 @@ log4js.configure({
 })
 
 var logger = log4js.getLogger('FurryBot');
+global.logger = logger;
 logger.level = 'INFO';
 
 var bot = mineflayer.createBot(botConfig);
+global.bot = bot;
 bot.loadPlugin(pathfinder);
-bindEvents(bot);
 
-function bindEvents(bot) {
+global.onlineState = false;
 
-    var onlineState = false;
+bot.on("chat", async (username, message) => {
+    logger.info(`<${username}> ${message}`);
 
-    bot.on("chat", async (username, message) => {
-        logger.info(`<${username}> ${message}`);
+    if (username === bot.username) return;
 
-        if (username === bot.username) return;
+    if (/^zzz/.test(message)) {
+        goToSleep();
+    }
 
-        if (/^zzz/.test(message)) {
-            goToSleep();
-        }
+    if (/furry|福瑞/.test(message)) {
+        bot.chat("福瑞...嘿嘿...福瑞！");
+    }
 
-        if (/furry|福瑞/.test(message)) {
-            bot.chat("福瑞...嘿嘿...福瑞！");
-        }
+    if (/^:cmd#[\w/@*!#=\[\]\x20/\u4E00-\u9FA5]+$/.test(message)) {
+        cmd = message.slice(5);
+        logger.info("Command: " + cmd);
+        bot.chat("/" + cmd);
+    }
 
-        if (/^:cmd#[\w/@*!#=\[\]\x20/\u4E00-\u9FA5]+$/.test(message)) {
-            cmd = message.slice(5);
-            logger.info("Command: " + cmd);
-            bot.chat("/" + cmd);
-        }
+    if (/^:msg#[\w/@*!#=\[\]\x20/\u4E00-\u9FA5]+$/.test(message)) {
+        msg = message.slice(5);
+        logger.info("Message: " + msg);
+        bot.chat(msg);
+    }
 
-        if (/^:msg#[\w/@*!#=\[\]\x20/\u4E00-\u9FA5]+$/.test(message)) {
-            msg = message.slice(5);
-            logger.info("Message: " + msg);
-            bot.chat(msg);
-        }
-
-        if (/^:bot#help$/.test(message)) {
-            var helpMsg = `:bot#[CMD] - 执行命令[CMD]
+    if (/^:bot#help$/.test(message)) {
+        var helpMsg = `:bot#[CMD] - 执行命令[CMD]
 :bot#help - 显示帮助
 :bot#exit - 退出
 :bot#stats - 状态
@@ -75,198 +74,115 @@ function bindEvents(bot) {
 :cmd#[CMD] - 执行命令[CMD]
 :msg#[MSG] - 发送消息[MSG]
 zzz - 找床摸鱼`;
-            bot.whisper(username, helpMsg);
-        }
+        bot.whisper(username, helpMsg);
+    }
 
-        if (/^:bot#stats$/.test(message)) {
-            bot.whisper(username, botStats());
-        }
+    if (/^:bot#stats$/.test(message)) {
+        bot.whisper(username, botStats());
+    }
 
-        if (/^:bot#exit$/.test(message)) {
-            close();
-            bot.quit();
-            process.exit();
-        }
+    if (/^:bot#exit$/.test(message)) {
+        close();
+        bot.quit();
+        process.exit();
+    }
 
-        if (/^:bot#tp2Me$/.test(message)) {
-            bot.chat("/tpa " + username);
-        }
+    if (/^:bot#tp2Me$/.test(message)) {
+        bot.chat("/tpa " + username);
+    }
 
-        if (/^:bot#tp2Bot$/.test(message)) {
-            bot.chat("/tpahere " + username);
-        }
+    if (/^:bot#tp2Bot$/.test(message)) {
+        bot.chat("/tpahere " + username);
+    }
 
-        const InventoryCommand = message.split(" ");
-        if (/^:bot#inv$/.test(message)) {
-            sayItems();
-        }
+    const InventoryCommand = message.split(" ");
+    if (/^:bot#inv$/.test(message)) {
+        sayItems();
+    }
 
-        if (/^:bot#toss \d+ \w+$/.test(message)) {
-            // toss amount name
-            // ex: toss 64 diamond
-            tossItem(InventoryCommand[2], InventoryCommand[1]);
-        }
+    if (/^:bot#toss \d+ \w+$/.test(message)) {
+        // toss amount name
+        // ex: toss 64 diamond
+        tossItem(InventoryCommand[2], InventoryCommand[1]);
+    }
 
-        if (/^:bot#toss \w+$/.test(message)) {
-            // toss name
-            // ex: toss diamond
-            tossItem(InventoryCommand[1]);
-        }
-    });
+    if (/^:bot#toss \w+$/.test(message)) {
+        // toss name
+        // ex: toss diamond
+        tossItem(InventoryCommand[1]);
+    }
+});
 
-    bot.on("messagestr", async (message, messagePosition, jsonMsg) => {
-        if (messagePosition === "chat") return;
-        logger.info(message);
-    });
+bot.on("messagestr", async (message, messagePosition, jsonMsg) => {
+    if (messagePosition === "chat") return;
+    logger.info(message);
+});
 
-    //bot.once('spawn', () => { bot.chat("开始摸鱼"); });
-    bot.on("login", () => { onlineState = true; });
-    bot.on("death", () => {
-        bot.chat("呜呜呜，不许欺负福瑞！");
-    });
-    CommandInput();
+//bot.once('spawn', () => { bot.chat("开始摸鱼"); });
+bot.on("login", () => { global.onlineState = true; });
+bot.on("death", () => {
+    bot.chat("呜呜呜，不许欺负福瑞！");
+});
 
-    //  记录错误和被踢出服务器的原因:
-    bot.on("kicked", logger.info);
-    bot.on("error", logger.info);
-    bot.on("end", () => {
-        logger.info("Bot disconnected");
-        onlineState = false;
-        ReConnect();
-    });
+//  记录错误和被踢出服务器的原因:
+bot.on("kicked", logger.info.bind(logger));
+bot.on("error", logger.info.bind(logger));
+bot.on("end", () => {
+    logger.info("Bot disconnected");
+    global.onlineState = false;
+    logger.info("Try to reconnect...");
+    // Waiting for Heroku to restart the bot
+    process.exit();
+});
 
-    // Web panel
-    app.use(express.static('public'));
-    app.use(bodyParser.urlencoded({ extended: false }));
-    app.get('/api/state', function (req, res) {
-        var botState = { "isOnline": false, "username": "Steve", "health": 0, "food": 0, "level": 0, "dimension": "Furry Island", "position": { "x": 0, "y": 0, "z": 0, }, "inventory": {}, };
+// Web panel
+app.use(express.static('public'));
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use('/api', require('./routers/api'));
+app.use('/music', require('./routers/music'));
+
+app.get('/404', function (req, res) {
+    res.redirect('/404.html');
+});
+
+app.listen(port, () => logger.info(`Server running on ${port}`));
+
+/*
+var server = http.createServer(function (request, response) {
+    // 获得HTTP请求的method和url:
+    // console.log(request.method + ': ' + request.url);
+    // 将HTTP响应200写入response, 同时设置Content-Type: text/html:
+    response.writeHead(200, { 'Content-Type': 'text/html' });
+ 
+    var pathname = url.parse(request.url).pathname;
+    if (pathname == '/') {
+        fs.readFile("index.html", function (err, data) {
+            if (!err) {
+                response.writeHead(200, { "Content-Type": "text/html;charset=UTF-8" });
+                response.end(data);
+            } else {
+                throw err;
+            }
+        });
+    } else if (pathname == '/api/state') {
+        response.writeHead(200, { "Content-Type": "application/json;charset=UTF-8" });
+        var botState = { "isOnline": false, "health": 0, "food": 0, "level": 0, "dimension": "Furry Island", "position": { "x": 0, "y": 0, "z": 0, }, "inventory": [], };
         if (onlineState) {
-            botState = { "isOnline": onlineState, "username": bot.username, "health": bot.health, "food": bot.food, "level": bot.experience.level, "dimension": bot.game.dimension, "position": { "x": bot.entity.position.x, "y": bot.entity.position.y, "z": bot.entity.position.z, }, "inventory": bot.inventory, };
+            botState = { "isOnline": onlineState, "health": bot.health, "food": bot.food, "level": bot.experience.level, "dimension": bot.game.dimension, "position": { "x": bot.entity.position.x, "y": bot.entity.position.y, "z": bot.entity.position.z, }, "inventory": bot.inventory.items, };
         }
         var json = JSON.stringify(botState);
-        res.send(json);
-    });
-    app.post('/api/cmd', function (req, res) {
-        var msg = req.body.msg;
-        bot.chat("/" + msg);
-    });
-    app.post('/api/chat', function (req, res) {
-        var msg = req.body.msg;
-        bot.chat(msg);
-    });
-    app.post('/api/botcmd', function (req, res) {
-        var msg = req.body.msg;
-        if (msg === "") { return; }
-        if (msg === ":help") {
-            logger.info(
-                `调试指令：
-:help - 显示帮助
-:exit :(q)uit - 退出
-:stats - 状态`
-            );
-        } else if (msg === ":exit" || msg === ":quit" || msg === ":q") {
-            close();
-            bot.quit();
-            process.exit();
-        } else if (msg === ":stats") {
-            logger.info(botStats());
-        }
-    });
-    app.get('/api/log', function (req, res) {
-        fs.readFile('./logs/bot.log', 'utf8', function (err, data) {
+        response.end(json);
+    } else {
+        fs.readFile("./" + pathname, function (err, data) {
             if (!err) {
-                res.send(data);
+                response.end(data);
+            } else {
+                throw err;
             }
-            else {
-                res.send(err);
-            }
-        })
-    });
-
-    app.listen(port, () => logger.info(`Server running on ${port}`));
-
-    /*
-    var server = http.createServer(function (request, response) {
-        // 获得HTTP请求的method和url:
-        // console.log(request.method + ': ' + request.url);
-        // 将HTTP响应200写入response, 同时设置Content-Type: text/html:
-        response.writeHead(200, { 'Content-Type': 'text/html' });
- 
-        var pathname = url.parse(request.url).pathname;
-        if (pathname == '/') {
-            fs.readFile("index.html", function (err, data) {
-                if (!err) {
-                    response.writeHead(200, { "Content-Type": "text/html;charset=UTF-8" });
-                    response.end(data);
-                } else {
-                    throw err;
-                }
-            });
-        } else if (pathname == '/api/state') {
-            response.writeHead(200, { "Content-Type": "application/json;charset=UTF-8" });
-            var botState = { "isOnline": false, "health": 0, "food": 0, "level": 0, "dimension": "Furry Island", "position": { "x": 0, "y": 0, "z": 0, }, "inventory": [], };
-            if (onlineState) {
-                botState = { "isOnline": onlineState, "health": bot.health, "food": bot.food, "level": bot.experience.level, "dimension": bot.game.dimension, "position": { "x": bot.entity.position.x, "y": bot.entity.position.y, "z": bot.entity.position.z, }, "inventory": bot.inventory.items, };
-            }
-            var json = JSON.stringify(botState);
-            response.end(json);
-        } else {
-            fs.readFile("./" + pathname, function (err, data) {
-                if (!err) {
-                    response.end(data);
-                } else {
-                    throw err;
-                }
-            });
-        }
-    }).listen(port);
-    */
-}
-
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function ReConnect() {
-    await delay(10000);
-    try {
-        logger.info("重新连接...");
-        bot = mineflayer.createBot(botConfig);
-        //bindEvents(bot);
-    } catch (error) {
-        logger.info("Error: " + error);
-        ReConnect();
+        });
     }
-}
-
-async function CommandInput() {
-    console.info("准备读取命令...");
-    let input = await readLine();
-    while (true) {
-        if (input === "") {
-            continue;
-        }
-        if (input === ":help") {
-            console.log(`调试指令：
-:help - 显示帮助
-:exit :(q)uit - 退出
-:stats - 状态`
-            );
-        } else if (input === ":exit" || input === ":quit" || input === ":q") {
-            close();
-            bot.quit();
-            process.exit();
-        } else if (input === ":stats") {
-            console.log(botStats());
-        } else if (input[0] === "/") {
-            let cmd = input.substr(1);
-            console.log("Command: " + cmd);
-            bot.chat(input);
-        } else {
-            console.log(`<${bot.username}> ` + input);
-            bot.chat(input);
-        }
-        input = await readLine();
-    }
-}
+}).listen(port);
+*/
 
 async function goToSleep() {
     const bed = bot.findBlock({
@@ -359,4 +275,36 @@ function botStats() {
     }
     stats += `玩家人数：${playerList.length}    玩家列表：${playerList}`;
     return stats;
+}
+
+CommandInput();
+async function CommandInput() {
+    console.info("准备读取命令...");
+    let input = await readLine();
+    while (true) {
+        if (input === "") {
+            continue;
+        }
+        if (input === ":help") {
+            console.log(`调试指令：
+:help - 显示帮助
+:exit :(q)uit - 退出
+:stats - 状态`
+            );
+        } else if (input === ":exit" || input === ":quit" || input === ":q") {
+            close();
+            bot.quit();
+            process.exit();
+        } else if (input === ":stats") {
+            console.log(botStats());
+        } else if (input[0] === "/") {
+            let cmd = input.substr(1);
+            console.log("Command: " + cmd);
+            bot.chat(input);
+        } else {
+            console.log(`<${bot.username}> ` + input);
+            bot.chat(input);
+        }
+        input = await readLine();
+    }
 }
